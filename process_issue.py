@@ -1,22 +1,22 @@
 import os
 import json
-from github import Github
-import google.generativeai as genai
+from github import Github, Auth
+from google import genai
 
 gh_token = os.environ.get("GITHUB_TOKEN")
 gemini_key = os.environ.get("GEMINI_API_KEY")
 repo_name = os.environ.get("REPOSITORY")
 issue_number = int(os.environ.get("ISSUE_NUMBER"))
-allowed_user = os.environ.get("ALLOWED_USER")
+allowed_user = os.environ.get("ALLOWED_USER").strip().lower()
 
-gh = Github(gh_token)
+auth = Auth.Token(gh_token)
+gh = Github(auth=auth)
 repo = gh.get_repo(repo_name)
 issue = repo.get_issue(number=issue_number)
 
-genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel('gemini-1.5-pro')
+client = genai.Client(api_key=gemini_key)
 
-if issue.user.login == allowed_user:
+if issue.user.login.strip().lower() == allowed_user:
     prompt = f"""
     Task: {issue.title}
     Description: {issue.body}
@@ -28,8 +28,18 @@ if issue.user.login == allowed_user:
     "pr_body": string
     """
 
-    response = model.generate_content(prompt)
-    response_text = response.text.strip().removeprefix('```json').removesuffix('```').strip()
+    response = client.models.generate_content(model='gemini-1.5-pro', contents=prompt)
+    response_text = response.text.strip()
+    
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    elif response_text.startswith("```"):
+        response_text = response_text[3:]
+        
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+        
+    response_text = response_text.strip()
     result = json.loads(response_text)
 
     branch_name = f"issue-{issue_number}-ai-code"
@@ -68,5 +78,5 @@ else:
     Оцени реализуемость задачи, возможные сложности и предложи краткий план внедрения. Не пиши готовый код.
     """
     
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model='gemini-1.5-pro', contents=prompt)
     issue.create_comment(response.text)
