@@ -28,4 +28,4 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ALLOWED_USER: "OstinUA"
+          ALLOWED_USER: ${{ secrets.ALLOWED_USER }}
