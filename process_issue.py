@@ -1,7 +1,7 @@
 import os
 import json
-from github import Github, Auth
-from google import genai
+import requests
+from github import Github
 
 gh_token = os.environ.get("GITHUB_TOKEN")
 gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -9,12 +9,12 @@ repo_name = os.environ.get("REPOSITORY")
 issue_number = int(os.environ.get("ISSUE_NUMBER"))
 allowed_user = os.environ.get("ALLOWED_USER").strip().lower()
 
-auth = Auth.Token(gh_token)
-gh = Github(auth=auth)
+gh = Github(gh_token)
 repo = gh.get_repo(repo_name)
 issue = repo.get_issue(number=issue_number)
 
-client = genai.Client(api_key=gemini_key)
+model_name = "gemini-2.5-flash"
+api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
 
 if issue.user.login.strip().lower() == allowed_user:
     prompt = f"""
@@ -27,9 +27,14 @@ if issue.user.login.strip().lower() == allowed_user:
     "pr_title": string,
     "pr_body": string
     """
-
-    response = client.models.generate_content(model='gemini-1.5-pro', contents=prompt)
-    response_text = response.text.strip()
+    
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    headers = {"Content-Type": "application/json"}
+    
+    resp = requests.post(api_url, json=payload, headers=headers)
+    resp_data = resp.json()
+    
+    response_text = resp_data['candidates'][0]['content']['parts'][0]['text'].strip()
     
     if response_text.startswith("```json"):
         response_text = response_text[7:]
@@ -78,5 +83,11 @@ else:
     Оцени реализуемость задачи, возможные сложности и предложи краткий план внедрения. Не пиши готовый код.
     """
     
-    response = client.models.generate_content(model='gemini-1.5-pro', contents=prompt)
-    issue.create_comment(response.text)
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    headers = {"Content-Type": "application/json"}
+    
+    resp = requests.post(api_url, json=payload, headers=headers)
+    resp_data = resp.json()
+    
+    response_text = resp_data['candidates'][0]['content']['parts'][0]['text']
+    issue.create_comment(response_text)
