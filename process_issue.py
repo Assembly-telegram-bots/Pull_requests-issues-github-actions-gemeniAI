@@ -60,5 +60,5 @@ result = json.loads(response_text)
 
 repo.create_issue(
     title=result['issue_title'],
-    body=f"{result['issue_body']}\n\n---\n*Сгенерировано на основе PR #{pr_number}*"
+    body=f"{result['issue_body']}\n\n---\n*Generated from PR #{pr_number}*"
 )
