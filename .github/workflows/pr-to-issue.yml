@@ -1,17 +1,17 @@
-name: AI Issue to PR
+name: PR to Issue
 
 on:
-  issues:
+  pull_request:
     types: [labeled]
 
 jobs:
   build:
-    if: github.event.label.name == 'auto-code'
+    if: github.event.label.name == 'auto-document'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       issues: write
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +22,10 @@ jobs:
           
       - run: pip install PyGithub requests
       
-      - run: python process_issue.py
+      - run: python process_pr.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           ALLOWED_USER: ${{ secrets.ALLOWED_USER }}
